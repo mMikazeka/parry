@@ -1,3 +1,7 @@
+-- PARRY GUI
+-- Draggable window with Main tab (toggle) and Settings tab (keybind picker)
+-- Wraps your existing parry logic
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -6,16 +10,24 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
+-- ─────────────────────────────────────────
+--  STATE
+-- ─────────────────────────────────────────
 local parryEnabled = true
 local currentKey   = Enum.KeyCode.F
 local isListeningForKey = false
 
+-- ─────────────────────────────────────────
+--  GUI SCAFFOLD
+-- ─────────────────────────────────────────
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ParryGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 10
 ScreenGui.Parent = PlayerGui
 
+-- Main window frame
 local Window = Instance.new("Frame")
 Window.Name = "Window"
 Window.Size = UDim2.new(0, 260, 0, 200)
@@ -34,6 +46,9 @@ WinStroke.Color = Color3.fromRGB(255, 220, 60)
 WinStroke.Thickness = 1.2
 WinStroke.Parent = Window
 
+-- ─────────────────────────────────────────
+--  TITLE BAR (drag handle)
+-- ─────────────────────────────────────────
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 36)
@@ -45,6 +60,7 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 8)
 TitleCorner.Parent = TitleBar
 
+-- Covers bottom corners so title looks flat on the bottom edge
 local TitleCoverBottom = Instance.new("Frame")
 TitleCoverBottom.Size = UDim2.new(1, 0, 0, 8)
 TitleCoverBottom.Position = UDim2.new(0, 0, 1, -8)
@@ -63,6 +79,7 @@ TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = TitleBar
 
+-- Minimize button
 local MinBtn = Instance.new("TextButton")
 MinBtn.Text = "−"
 MinBtn.Font = Enum.Font.GothamBold
@@ -73,6 +90,7 @@ MinBtn.Size = UDim2.new(0, 28, 0, 28)
 MinBtn.Position = UDim2.new(1, -58, 0, 4)
 MinBtn.Parent = TitleBar
 
+-- Close button
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Text = "✕"
 CloseBtn.Font = Enum.Font.GothamBold
@@ -83,6 +101,9 @@ CloseBtn.Size = UDim2.new(0, 28, 0, 28)
 CloseBtn.Position = UDim2.new(1, -30, 0, 4)
 CloseBtn.Parent = TitleBar
 
+-- ─────────────────────────────────────────
+--  TAB BAR
+-- ─────────────────────────────────────────
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(1, 0, 0, 30)
 TabBar.Position = UDim2.new(0, 0, 0, 36)
@@ -102,7 +123,7 @@ local function makeTab(name, order)
     btn.TextSize = 12
     btn.TextColor3 = Color3.fromRGB(160, 160, 170)
     btn.BackgroundTransparency = 1
-    btn.Size = UDim2.new(0.5, 0, 1, 0)
+    btn.Size = UDim2.new(0, 130, 1, 0)
     btn.LayoutOrder = order
     btn.Parent = TabBar
     return btn
@@ -111,6 +132,7 @@ end
 local TabMain     = makeTab("MAIN", 1)
 local TabSettings = makeTab("SETTINGS", 2)
 
+-- Active tab indicator line
 local TabIndicator = Instance.new("Frame")
 TabIndicator.Size = UDim2.new(0.5, 0, 0, 2)
 TabIndicator.Position = UDim2.new(0, 0, 1, -2)
@@ -118,17 +140,24 @@ TabIndicator.BackgroundColor3 = Color3.fromRGB(255, 220, 60)
 TabIndicator.BorderSizePixel = 0
 TabIndicator.Parent = TabBar
 
+-- ─────────────────────────────────────────
+--  CONTENT AREA
+-- ─────────────────────────────────────────
 local Content = Instance.new("Frame")
 Content.Size = UDim2.new(1, 0, 1, -66)
 Content.Position = UDim2.new(0, 0, 0, 66)
 Content.BackgroundTransparency = 1
+Content.Active = false
 Content.Parent = Window
 
+-- ── MAIN PAGE ──
 local MainPage = Instance.new("Frame")
 MainPage.Size = UDim2.new(1, 0, 1, 0)
 MainPage.BackgroundTransparency = 1
+MainPage.Active = false
 MainPage.Parent = Content
 
+-- Status text
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Text = "PARRY ACTIVE"
 StatusLabel.Font = Enum.Font.GothamBold
@@ -140,6 +169,7 @@ StatusLabel.Position = UDim2.new(0, 0, 0, 12)
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainPage
 
+-- Toggle button
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Text = "ENABLED"
 ToggleBtn.Font = Enum.Font.GothamBold
@@ -155,6 +185,7 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(0, 6)
 ToggleCorner.Parent = ToggleBtn
 
+-- Keybind hint on main page
 local KeyHint = Instance.new("TextLabel")
 KeyHint.Text = "bind: [ F ]"
 KeyHint.Font = Enum.Font.GothamSemibold
@@ -166,9 +197,11 @@ KeyHint.Position = UDim2.new(0, 0, 1, -22)
 KeyHint.TextXAlignment = Enum.TextXAlignment.Center
 KeyHint.Parent = MainPage
 
+-- ── SETTINGS PAGE ──
 local SettingsPage = Instance.new("Frame")
 SettingsPage.Size = UDim2.new(1, 0, 1, 0)
 SettingsPage.BackgroundTransparency = 1
+SettingsPage.Active = false
 SettingsPage.Visible = false
 SettingsPage.Parent = Content
 
@@ -213,6 +246,10 @@ KeyBindHint.Size = UDim2.new(1, -32, 0, 14)
 KeyBindHint.Position = UDim2.new(0, 16, 0, 78)
 KeyBindHint.TextXAlignment = Enum.TextXAlignment.Left
 KeyBindHint.Parent = SettingsPage
+
+-- ─────────────────────────────────────────
+--  LOGIC: TOGGLE
+-- ─────────────────────────────────────────
 local function updateToggleVisual()
     if parryEnabled then
         ToggleBtn.Text = "ENABLED"
@@ -233,6 +270,10 @@ ToggleBtn.MouseButton1Click:Connect(function()
     parryEnabled = not parryEnabled
     updateToggleVisual()
 end)
+
+-- ─────────────────────────────────────────
+--  LOGIC: KEYBIND PICKER
+-- ─────────────────────────────────────────
 local function setKey(keyCode)
     currentKey = keyCode
     local name = keyCode.Name
@@ -258,6 +299,10 @@ KeyBindBtn.MouseButton1Click:Connect(function()
         end
     end)
 end)
+
+-- ─────────────────────────────────────────
+--  LOGIC: TABS
+-- ─────────────────────────────────────────
 local function switchTab(tab)
     if tab == "main" then
         MainPage.Visible = true
@@ -281,6 +326,10 @@ end
 TabMain.MouseButton1Click:Connect(function() switchTab("main") end)
 TabSettings.MouseButton1Click:Connect(function() switchTab("settings") end)
 switchTab("main") -- default
+
+-- ─────────────────────────────────────────
+--  LOGIC: MINIMIZE / CLOSE
+-- ─────────────────────────────────────────
 local minimized = false
 local fullHeight = 200
 
@@ -303,6 +352,10 @@ CloseBtn.MouseButton1Click:Connect(function()
         ScreenGui:Destroy()
     end)
 end)
+
+-- ─────────────────────────────────────────
+--  LOGIC: DRAG
+-- ─────────────────────────────────────────
 local dragging = false
 local dragStart, startPos
 
@@ -336,6 +389,13 @@ UserInputService.InputChanged:Connect(function(input)
         )
     end
 end)
+
+-- ─────────────────────────────────────────
+--  PARRY CORE (your original script inline)
+-- ─────────────────────────────────────────
+-- Your obfuscated parry logic is loaded here.
+-- It is gated by parryEnabled and currentKey.
+
 local function getParryKey()
     return currentKey
 end
@@ -343,12 +403,33 @@ end
 local function isParryEnabled()
     return parryEnabled
 end
+
+-- Input listener that gates the original parry execution
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if not isParryEnabled() then return end
     if input.KeyCode ~= getParryKey() then return end
+
+    -- ── YOUR ORIGINAL PARRY LOGIC STARTS HERE ──
     local parryFunc = loadstring(game:HttpGet("https://pastebin.com/raw/0tzZb0Cm"))()
+    -- ── YOUR ORIGINAL PARRY LOGIC ENDS HERE ──
 end)
+
+-- ─────────────────────────────────────────
+--  GUI TOGGLE (Keypad 5)
+-- ─────────────────────────────────────────
+local guiVisible = true
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.KeypadFive then
+        guiVisible = not guiVisible
+        Window.Visible = guiVisible
+    end
+end)
+
+-- ─────────────────────────────────────────
+--  OPEN ANIMATION
+-- ─────────────────────────────────────────
 Window.Size = UDim2.new(0, 260, 0, 0)
 TweenService:Create(Window, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
     Size = UDim2.new(0, 260, 0, fullHeight)
